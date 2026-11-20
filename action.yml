@@ -1,0 +1,66 @@
+name: ReproCue
+description: Run the same Playwright reproduction against two Git commits.
+inputs:
+  base:
+    description: Git ref or commit to test before the fix.
+    required: true
+  head:
+    description: Git ref or commit containing the candidate fix.
+    required: true
+  spec:
+    description: Repository-relative Playwright spec to read from the candidate commit.
+    required: true
+  project:
+    description: Playwright project to select if the repository uses multiple projects.
+    required: false
+  working-directory:
+    description: Directory containing the checked-out Git repository.
+    required: false
+    default: '.'
+  artifact-name:
+    description: Name for the evidence artifact. Use a distinct name for each invocation in the same run.
+    required: false
+    default: reprocue-evidence
+outputs:
+  artifact-url:
+    description: Link to the uploaded evidence.
+    value: ${{ steps.upload.outputs.artifact-url }}
+runs:
+  using: composite
+  steps:
+    - name: Verify the fix
+      id: verify
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BASE: ${{ inputs.base }}
+        HEAD: ${{ inputs.head }}
+        SPEC: ${{ inputs.spec }}
+        PROJECT: ${{ inputs.project }}
+      run: |
+        evidence="$(mktemp -d "$RUNNER_TEMP/reprocue.XXXXXXXX")"
+        evidence="$(cd -- "$evidence" && pwd -P)"
+        printf 'evidence=%s\n' "$evidence" >> "$GITHUB_OUTPUT"
+
+        args=(verify --base "$BASE" --head "$HEAD" --spec "$SPEC" --output "$evidence")
+        if [[ -n "$PROJECT" ]]; then
+          args+=(--project "$PROJECT")
+        fi
+
+        status=0
+        node "$GITHUB_ACTION_PATH/bin/reprocue.mjs" "${args[@]}" || status=$?
+        if [[ -f "$evidence/report.md" && -f "$evidence/report.json" ]]; then
+          cat "$evidence/report.md" >> "$GITHUB_STEP_SUMMARY"
+        else
+          printf '## ReproCue\n\nVerification did not produce a complete report. See the workflow logs.\n' >> "$GITHUB_STEP_SUMMARY"
+          status=2
+        fi
+        exit "$status"
+    - name: Upload verification evidence
+      id: upload
+      if: ${{ always() && steps.verify.outputs.evidence != '' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.verify.outputs.evidence }}
+        if-no-files-found: warn
