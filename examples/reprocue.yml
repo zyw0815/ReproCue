@@ -1,17 +1,43 @@
-# Copy to .github/workflows/reprocue.yml and update the spec path and Action ref.
+# Copy to .github/workflows/reprocue.yml. Use the reprocue label to opt in.
 name: Verify bug fix
-on: pull_request
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, edited]
 
 permissions:
   contents: read
 
 jobs:
   reprocue:
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'reprocue') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Read the reproduction path
+        id: scenario
+        shell: bash
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if ! spec=$(awk '
+            /^ReproCue-Spec:/ {
+              sub(/^ReproCue-Spec:[[:blank:]]*/, "")
+              sub(/[[:space:]]+$/, "")
+              selected = $0
+              matches++
+            }
+            END {
+              if (matches != 1 || selected == "" || selected ~ /[[:cntrl:]]/) exit 1
+              print selected
+            }
+          ' <<< "$PR_BODY"); then
+            echo '::error::Add exactly one ReproCue-Spec: tests/example.spec.mjs line to the PR description.'
+            exit 1
+          fi
+          printf 'spec=%s\n' "$spec" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v7
@@ -21,9 +47,8 @@ jobs:
       # Install browsers for both revisions if their Playwright versions differ.
       - name: Install Playwright Chromium
         run: npm ci && npm exec -- playwright install --with-deps chromium
-      # Pin an approved commit or released tag for stable CI.
-      - uses: zyw0815/ReproCue@develop
+      - uses: zyw0815/ReproCue@v0.1.0-alpha.1
         with:
           base: ${{ github.event.pull_request.base.sha }}
           head: ${{ github.event.pull_request.head.sha }}
-          spec: tests/retry.spec.mjs
+          spec: ${{ steps.scenario.outputs.spec }}

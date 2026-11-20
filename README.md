@@ -53,6 +53,18 @@ The output contains `report.md`, `report.json` and any browser traces collected 
 
 ## Add a pull request check
 
-Copy the [example workflow](examples/reprocue.yml) to `.github/workflows/reprocue.yml` in your application repository. Set the spec path to the committed test and pin ReproCue to the revision you want to run. The example uses the PR's base and head commits. Look for the verdict in the GitHub Actions job summary linked from the PR's checks, and download the report and traces from the run artifacts.
+1. Copy the [example workflow](examples/reprocue.yml) to `.github/workflows/reprocue.yml` in your application repository. It uses the `v0.1.0-alpha.1` ReproCue Action and the PR's base and head commits.
+2. Commit one self-contained Playwright spec on the fix branch, with a `ReproCue acceptance` step as described above.
+3. Put exactly one `ReproCue-Spec` line in the PR description. Use the spec's path from the repository root.
+
+   ```text
+   ReproCue-Spec: tests/retry.spec.mjs
+   ```
+
+4. Apply the `reprocue` label to opt in. Create the label in your repository the first time. While the label is present, the check also runs when you push another commit or edit the PR description.
+
+From the PR's **Checks** tab, open the GitHub Actions run and select **Summary** to see the verdict, both commit SHAs, and any assertion errors. Download `reprocue-evidence` from **Artifacts** to get the reports and the traces collected for each revision.
+
+The [separate example repository](https://github.com/zyw0815/ReproCue-example) shows this setup on the upload demo.
 
 See [Contributing](CONTRIBUTING.md) for the issue and branch workflow.
