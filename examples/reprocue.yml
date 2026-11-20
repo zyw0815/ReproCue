@@ -1,0 +1,29 @@
+# Copy to .github/workflows/reprocue.yml and update the spec path and Action ref.
+name: Verify bug fix
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  reprocue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      # Install browsers for both revisions if their Playwright versions differ.
+      - name: Install Playwright Chromium
+        run: npm ci && npm exec -- playwright install --with-deps chromium
+      # Pin an approved commit or released tag for stable CI.
+      - uses: zyw0815/ReproCue@develop
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+          spec: tests/retry.spec.mjs
