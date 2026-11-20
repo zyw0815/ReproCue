@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm test
+      - name: Prepare browser demo
+        run: |
+          node demo/run.mjs --prepare "$RUNNER_TEMP/reprocue-demo"
+          cd "$RUNNER_TEMP/reprocue-demo"
+          npm ci
+          npm exec -- playwright install --with-deps chromium
+      - name: Verify browser demo
+        uses: ./
+        with:
+          working-directory: ${{ runner.temp }}/reprocue-demo
+          base: before-fix
+          head: after-fix
+          spec: tests/retry.spec.mjs

@@ -1,0 +1,16 @@
+{
+  "name": "reprocue",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "description": "Verify bug fixes with replayable tests on GitHub pull requests.",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "reprocue": "bin/reprocue.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo": "node demo/run.mjs"
+  }
+}
