@@ -7,6 +7,8 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stripVTControlCharacters } from 'node:util';
+import checkpoint from './checkpoint.cjs';
+import { htmlReport } from './report-html.mjs';
 
 const reporter = fileURLToPath(new URL('./playwright-reporter.cjs', import.meta.url));
 const outputMarker = 'ReproCue output v1\n';
@@ -209,6 +211,7 @@ function markdown(report) {
     '## ReproCue', '', `**${report.verdict}**. ${safe(report.summary)}`, '',
     `Scenario: ${safe(report.spec)}`, '', '| Revision | Commit | Status | Evidence |',
     '| --- | --- | --- | --- |', row('Base', report.base), row('Head', report.head), '',
+    'Open `report.html` in the evidence bundle to compare the visual checkpoints.', '',
     `Playwright traces and execution logs: \`${report.run}/{base,head}/\`.`, '',
     'Open a trace with `npx playwright show-trace <path/to/trace.zip>`.', '',
   ].join('\n');
@@ -244,9 +247,19 @@ export function verify(options, cwd = process.cwd()) {
   }
 
   const reportPath = join(output, 'report.json');
+  const checkpoints = {};
+  for (const side of ['base', 'head']) {
+    const image = checkpoint.readPng(join(evidence, side, 'checkpoint.png'));
+    if (image) {
+      checkpoints[side] = image;
+      report[side].checkpoint = `${report.run}/${side}/checkpoint.png`;
+    }
+  }
   writeFileSync(join(evidence, 'report.json'), `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
   writeFileSync(join(evidence, 'report.md'), markdown(report), { flag: 'wx' });
+  writeFileSync(join(evidence, 'report.html'), htmlReport(report, checkpoints), { flag: 'wx' });
   renameSync(join(evidence, 'report.json'), reportPath);
   renameSync(join(evidence, 'report.md'), join(output, 'report.md'));
+  renameSync(join(evidence, 'report.html'), join(output, 'report.html'));
   return { report, reportPath };
 }

@@ -1,0 +1,123 @@
+name: Publish ReproCue evidence
+on:
+  workflow_call:
+    inputs:
+      artifact-url:
+        description: URL returned by ReproCue for an artifact in this run.
+        required: true
+        type: string
+
+jobs:
+  comment:
+    if: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          contains(github.event.pull_request.labels.*.name, 'reprocue') }}
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    concurrency:
+      group: reprocue-comment-${{ github.event.pull_request.number }}
+    steps:
+      - name: Validate the evidence URL
+        id: artifact
+        shell: bash
+        env:
+          ARTIFACT_URL: ${{ inputs.artifact-url }}
+        run: |
+          prefix="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts/"
+          artifact_id=${ARTIFACT_URL#"$prefix"}
+          if [[ "$ARTIFACT_URL" != "$prefix"* || ! "$artifact_id" =~ ^[1-9][0-9]*$ ]]; then
+            echo '::error::Expected an evidence artifact from this repository and workflow run.'
+            exit 1
+          fi
+          printf 'id=%s\n' "$artifact_id" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ steps.artifact.outputs.id }}
+          path: ${{ runner.temp }}/reprocue-pr-evidence
+      - name: Create or update the ReproCue comment
+        uses: actions/github-script@v9
+        env:
+          ARTIFACT_ID: ${{ steps.artifact.outputs.id }}
+          REPORT_PATH: ${{ runner.temp }}/reprocue-pr-evidence/report.json
+        with:
+          script: |
+            const { lstatSync, readFileSync } = require('node:fs');
+            const { pull_request: eventPull } = context.payload;
+            const file = lstatSync(process.env.REPORT_PATH);
+            if (!file.isFile() || file.size > 1_048_576) {
+              throw new Error('Expected a regular ReproCue JSON report up to 1 MiB.');
+            }
+
+            const report = JSON.parse(readFileSync(process.env.REPORT_PATH, 'utf8'));
+            const statuses = new Map([
+              ['assertion-failed', 'Assertion failed'],
+              ['passed', 'Passed'],
+              ['inconclusive', 'Inconclusive'],
+            ]);
+            const verdicts = new Map([
+              ['verified', 'Fix verified'],
+              ['still-failing', 'Still failing'],
+              ['not-reproduced', 'Bug not reproduced'],
+              ['regressed', 'Regression detected'],
+              ['inconclusive', 'Inconclusive'],
+            ]);
+            if (report?.version !== 1 || !verdicts.has(report.verdict) ||
+                !statuses.has(report.base?.status) || !statuses.has(report.head?.status) ||
+                typeof report.spec !== 'string' || report.spec.length === 0 || report.spec.length > 1024) {
+              throw new Error('Invalid ReproCue report.');
+            }
+
+            const sha = /^[0-9a-f]{40}$/;
+            if (!sha.test(report.base.commit) || !sha.test(report.head.commit) ||
+                report.base.commit !== eventPull.base.sha || report.head.commit !== eventPull.head.sha) {
+              throw new Error('ReproCue report does not match the pull request event commits.');
+            }
+
+            const verdictByStatus = new Map([
+              ['assertion-failed:passed', 'verified'],
+              ['assertion-failed:assertion-failed', 'still-failing'],
+              ['passed:passed', 'not-reproduced'],
+              ['passed:assertion-failed', 'regressed'],
+            ]);
+            if (report.verdict !== 'inconclusive' &&
+                report.verdict !== verdictByStatus.get(`${report.base.status}:${report.head.status}`)) {
+              throw new Error('ReproCue verdict is inconsistent with the revision outcomes.');
+            }
+
+            const marker = '<!-- reprocue:pr-evidence -->';
+            const issue = { ...context.repo, issue_number: eventPull.number };
+            const comments = await github.paginate(github.rest.issues.listComments, issue);
+            const existing = comments.find(comment => comment.user?.login === 'github-actions[bot]' &&
+              comment.body?.startsWith(marker + '\n'));
+            const { data: current } = await github.rest.pulls.get({ ...context.repo, pull_number: eventPull.number });
+            const declaredSpec = (current.body ?? '').split('\n')
+              .filter(line => line.startsWith('ReproCue-Spec:'))
+              .map(line => line.slice('ReproCue-Spec:'.length).trim());
+            if (current.state !== 'open' || current.base.sha !== report.base.commit ||
+                current.head.sha !== report.head.commit || declaredSpec.length !== 1 ||
+                declaredSpec[0] !== report.spec || !current.labels.some(label => label.name === 'reprocue')) {
+              core.notice('The pull request changed since verification. Its comment was left as-is.');
+              return;
+            }
+
+            const evidence = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}` +
+              `/actions/runs/${context.runId}/artifacts/${process.env.ARTIFACT_ID}`;
+            const body = [
+              marker,
+              `### ReproCue · ${verdicts.get(report.verdict)}`,
+              '',
+              '| Revision | Commit | Outcome |',
+              '| --- | --- | --- |',
+              `| Before | \`${report.base.commit.slice(0, 12)}\` | ${statuses.get(report.base.status)} |`,
+              `| After | \`${report.head.commit.slice(0, 12)}\` | ${statuses.get(report.head.status)} |`,
+              '',
+              `[Download the visual report and browser traces](${evidence}), then open \`report.html\` from the archive.`,
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...issue, body });
+            }
