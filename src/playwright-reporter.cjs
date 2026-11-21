@@ -1,4 +1,6 @@
 const { writeFileSync } = require('node:fs');
+const { dirname, join } = require('node:path');
+const { pngAttachment } = require('./checkpoint.cjs');
 
 function errorText(error) {
   return error.message ?? error.value ?? 'Unknown Playwright error';
@@ -38,6 +40,7 @@ function acceptanceSteps(steps, spec, seen, inside = false) {
 module.exports = class ReproCueReporter {
   errors = [];
   tests = [];
+  checkpoint = null;
 
   onError(error) {
     this.errors.push(errorText(error));
@@ -62,13 +65,25 @@ module.exports = class ReproCueReporter {
       failedAssertions: [...failed],
       error: result.error ? errorText(result.error) : null,
     });
+    if (this.tests.length === 1) {
+      const evidence = dirname(process.env.REPROCUE_RESULT_FILE);
+      this.checkpoint = pngAttachment(result.attachments, join(evidence, 'artifacts'));
+    }
   }
 
   onEnd(result) {
-    writeFileSync(process.env.REPROCUE_RESULT_FILE, JSON.stringify({
+    const output = process.env.REPROCUE_RESULT_FILE;
+    writeFileSync(output, JSON.stringify({
       status: result.status,
       errors: this.errors,
       tests: this.tests,
     }));
+    if (this.tests.length === 1 && this.checkpoint) {
+      try {
+        writeFileSync(join(dirname(output), 'checkpoint.png'), this.checkpoint, { flag: 'wx' });
+      } catch {
+        // The verdict can still be reported without a checkpoint.
+      }
+    }
   }
 };

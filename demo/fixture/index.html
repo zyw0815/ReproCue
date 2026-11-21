@@ -2,7 +2,50 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Image upload</title>
+    <style>
+      body {
+        margin: 0;
+        background: #eef2f6;
+        color: #182230;
+        font: 16px/1.5 system-ui, sans-serif;
+      }
+      main {
+        box-sizing: border-box;
+        width: min(560px, calc(100% - 32px));
+        margin: 32px auto;
+        padding: 28px;
+        border: 1px solid #cdd6df;
+        border-radius: 16px;
+        background: #fff;
+      }
+      h1 { margin: 0 0 20px; font-size: 28px; }
+      label { display: block; margin: 0 0 8px; font-weight: 600; }
+      .controls, .feedback {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+      .controls { margin-bottom: 18px; }
+      button, input {
+        box-sizing: border-box;
+        border: 1px solid #cdd6df;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font: inherit;
+      }
+      button { background: #f4f6fa; font-weight: 600; }
+      button:disabled { color: #526173; }
+      #retry { border-color: #1554a0; background: #1554a0; color: #fff; }
+      .feedback { min-height: 42px; }
+      .feedback p { margin: 0; border-radius: 8px; padding: 8px 12px; font-weight: 600; }
+      .feedback p:empty { display: none; }
+      [data-state="pending"] { background: #e9f2ff; color: #164881; }
+      [data-state="error"] { background: #ffece7; color: #852d1c; }
+      [data-state="success"] { background: #e9f6ed; color: #205f33; }
+    </style>
     <script src="upload-error.js" defer></script>
     <script src="upload.js" defer></script>
   </head>
@@ -11,11 +54,15 @@
       <h1>Image upload</h1>
       <form>
         <label for="image">Choose an image</label>
-        <input id="image" type="file" accept="image/*" required />
-        <button id="upload" type="submit">Upload image</button>
-        <button id="retry" type="submit" hidden>Retry upload</button>
+        <div class="controls">
+          <input id="image" type="file" accept="image/*" required />
+          <button id="upload" type="submit">Upload image</button>
+        </div>
+        <div class="feedback">
+          <p role="status"></p>
+          <button id="retry" type="submit" hidden>Retry upload</button>
+        </div>
       </form>
-      <p role="status"></p>
     </main>
   </body>
 </html>

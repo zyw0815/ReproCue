@@ -5,7 +5,7 @@ const image = Buffer.from(
   'base64',
 );
 
-test('a failed image upload can be retried', async ({ page }) => {
+test('a failed image upload can be retried', async ({ page }, testInfo) => {
   await page.goto(new URL('../index.html', import.meta.url).href);
   await page.getByLabel('Choose an image').setInputFiles({
     name: 'sample.png',
@@ -18,7 +18,16 @@ test('a failed image upload can be retried', async ({ page }) => {
     const status = page.getByRole('status');
     const retry = page.getByRole('button', { name: 'Retry upload' });
 
-    await expect(status).toHaveText('Upload failed. Try again.', { timeout: 2000 });
+    try {
+      await expect(status).toHaveText('Upload failed. Try again.', { timeout: 2000 });
+    } finally {
+      try {
+        const body = await page.getByRole('main').screenshot({ animations: 'disabled', timeout: 2000 });
+        await testInfo.attach('reprocue-checkpoint', { body, contentType: 'image/png' });
+      } catch {
+        // A screenshot is optional evidence. Preserve the original assertion result.
+      }
+    }
     await expect(retry).toBeVisible();
     await retry.click();
     await expect(status).toHaveText('Upload complete.');

@@ -16,10 +16,12 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   uploadButton.disabled = true;
   retryButton.hidden = true;
+  status.dataset.state = 'pending';
   status.textContent = 'Uploading…';
 
   try {
     await sendImage();
+    status.dataset.state = 'success';
     status.textContent = 'Upload complete.';
   } catch {
     showUploadError(status, retryButton);
