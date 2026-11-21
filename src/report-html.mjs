@@ -40,6 +40,9 @@ function panel(title, kind, revision, checkpoint) {
 export function htmlReport(report, checkpoints) {
   const verdict = verdictLabels[report.verdict] ?? verdictLabels.inconclusive;
   const missing = !checkpoints.base || !checkpoints.head;
+  const checkpointHelp = missing
+    ? '\n    <p>Attach an image/png named <code>reprocue-checkpoint</code> in the Playwright scenario to show a checkpoint.</p>'
+    : '';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -87,8 +90,7 @@ export function htmlReport(report, checkpoints) {
     ${panel('Before', 'Base', report.base, checkpoints.base)}
     ${panel('After', 'Head', report.head, checkpoints.head)}
   </section>
-  <footer>
-    ${missing ? '<p>Attach an image/png named <code>reprocue-checkpoint</code> in the Playwright scenario to show a checkpoint.</p>' : ''}
+  <footer>${checkpointHelp}
     <p>Playwright traces and logs are included in <code>${escape(report.run)}/{base,head}/</code> in the evidence bundle.</p>
   </footer>
 </main>

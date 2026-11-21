@@ -41,4 +41,7 @@ test('compares checkpoints safely and describes missing screenshots', () => {
   assert.match(html, /<img src="data:image\/png;base64,[^"]+" alt="Before checkpoint">/u);
   assert.match(html, /No checkpoint captured for this revision/u);
   assert.match(html, /reprocue-checkpoint/u);
+
+  const completeHtml = htmlReport(report, { base: image, head: image });
+  assert.doesNotMatch(completeHtml, /[\t ]+$/mu);
 });

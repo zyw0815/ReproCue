@@ -78,4 +78,12 @@ From **Checks → Summary**, you can see the verdict, both commit SHAs, and any 
 
 The [separate example repository](https://github.com/zyw0815/ReproCue-example) shows this setup on the upload demo.
 
+## Publish a public demo report
+
+The upload demo has a [direct browser report](https://zyw0815.github.io/ReproCue-example/reports/pr-6/1284476e7f12735a832f856f23f986feb0ae0517/) linked from its [pull request](https://github.com/zyw0815/ReproCue-example/pull/6). The published file includes both screenshots.
+
+1. Choose a report whose screenshot and assertion details can be public, such as a synthetic fixture.
+2. Put that run's standalone HTML under `docs/reports/pr-<number>/<head-sha>/index.html`. Choose the branch containing `docs/` and the `/docs` folder as the GitHub Pages source. The example publishes from `develop`.
+3. Once the page is live, add the HTTPS URL to the PR conversation. Keep the original Actions artifact available for browser traces.
+
 See [Contributing](CONTRIBUTING.md) for the issue and branch workflow.
