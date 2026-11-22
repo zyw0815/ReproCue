@@ -60,6 +60,7 @@ test('leaves no comparison worktrees when neither revision can install Playwrigh
   const report = JSON.parse(readFileSync(join(cwd, '.reprocue', 'report.json'), 'utf8'));
   assert.match(report.base.reason, /package-lock\.json/u);
   assert.match(report.head.reason, /package-lock\.json/u);
+  assert.match(readFileSync(join(cwd, '.reprocue', 'report.html'), 'utf8'), /No checkpoint captured/u);
   assert.equal(git('worktree', 'list', '--porcelain'), worktrees);
 });
 
