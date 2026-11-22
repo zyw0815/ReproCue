@@ -1,0 +1,52 @@
+name: Publish a ReproCue report to Pages
+description: Publish a maintainer-approved public report and update its PR.
+inputs:
+  pull-request:
+    description: Number of the pull request whose evidence was approved for public viewing.
+    required: true
+  run-id:
+    description: ID of the successful ReproCue verification run.
+    required: true
+  seed-directory:
+    description: Optional public site directory from the default branch. Used only to initialize the report archive.
+    default: ''
+outputs:
+  report-url:
+    description: Browser URL of the published report.
+    value: ${{ steps.comment.outputs.report-url }}
+runs:
+  using: composite
+  steps:
+    - name: Prepare approved ReproCue evidence
+      id: prepare
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPROCUE_PR: ${{ inputs.pull-request }}
+        REPROCUE_RUN_ID: ${{ inputs.run-id }}
+      run: node "$GITHUB_ACTION_PATH/prepare.mjs"
+    - name: Configure GitHub Pages
+      uses: actions/configure-pages@v5
+    - name: Archive the report and previous pages
+      id: archive
+      shell: bash
+      env:
+        REPROCUE_REPORT_PATH: ${{ steps.prepare.outputs.report-path }}
+        REPROCUE_REPORT_FILE: ${{ steps.prepare.outputs.report-file }}
+        REPROCUE_SEED_DIRECTORY: ${{ inputs.seed-directory }}
+      run: bash "$GITHUB_ACTION_PATH/archive.sh"
+    - name: Upload the Pages site
+      uses: actions/upload-pages-artifact@v4
+      with:
+        path: ${{ steps.archive.outputs.site-path }}
+    - name: Deploy the Pages site
+      id: deploy
+      uses: actions/deploy-pages@v4
+    - name: Link the report from the pull request
+      id: comment
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPROCUE_PUBLICATION_FILE: ${{ steps.prepare.outputs.publication-file }}
+        REPROCUE_PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+      run: node "$GITHUB_ACTION_PATH/post.mjs"

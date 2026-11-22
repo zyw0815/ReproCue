@@ -43,6 +43,7 @@ jobs:
           REPORT_PATH: ${{ runner.temp }}/reprocue-pr-evidence/report.json
         with:
           script: |
+            const { createHash } = require('node:crypto');
             const { lstatSync, readFileSync } = require('node:fs');
             const { pull_request: eventPull } = context.payload;
             const file = lstatSync(process.env.REPORT_PATH);
@@ -99,6 +100,13 @@ jobs:
                 current.head.sha !== report.head.commit || declaredSpec.length !== 1 ||
                 declaredSpec[0] !== report.spec || !current.labels.some(label => label.name === 'reprocue')) {
               core.notice('The pull request changed since verification. Its comment was left as-is.');
+              return;
+            }
+
+            const specHash = createHash('sha256').update(report.spec).digest('hex');
+            const approval = `<!-- reprocue:public-report:${report.base.commit}:${report.head.commit}:${specHash} -->`;
+            if (report.verdict === 'verified' && existing?.body.includes(`\n${approval}\n`)) {
+              core.notice('The published comparison already matches this verification.');
               return;
             }
 
