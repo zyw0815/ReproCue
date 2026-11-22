@@ -100,8 +100,12 @@ export function renderApprovedEvidence(directory, publication) {
   return htmlReport({ ...report, summary }, screenshots);
 }
 
-function gh(args) {
-  return execFileSync('gh', args, { encoding: 'utf8', timeout: 120_000, stdio: ['ignore', 'pipe', 'pipe'] });
+function gh(args, description) {
+  try {
+    return execFileSync('gh', args, { encoding: 'utf8', timeout: 120_000, stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch {
+    throw new Error(`Could not ${description}. Check GitHub access and retry.`);
+  }
 }
 
 function main() {
@@ -120,14 +124,15 @@ function main() {
   const pullRequest = positiveInteger(REPROCUE_PR, 'pull request');
   const runId = positiveInteger(REPROCUE_RUN_ID, 'verification run');
   const root = `repos/${GITHUB_REPOSITORY}`;
-  const api = path => JSON.parse(gh(['api', path]));
+  const api = path => JSON.parse(gh(['api', path], 'read the selected pull request or workflow run'));
   const params = { repository: GITHUB_REPOSITORY, ref: GITHUB_REF, pullRequest, runId };
   const repo = api(root);
   const publication = validatePublication(params, repo, api(`${root}/pulls/${pullRequest}`), api(`${root}/actions/runs/${runId}`));
 
   const temporary = realpathSync(RUNNER_TEMP);
   const evidence = mkdtempSync(join(temporary, 'reprocue-download-'));
-  gh(['run', 'download', String(runId), '--repo', GITHUB_REPOSITORY, '--name', artifactName, '--dir', evidence]);
+  gh(['run', 'download', String(runId), '--repo', GITHUB_REPOSITORY, '--name', artifactName, '--dir', evidence],
+    'download the verification artifact');
   const html = renderApprovedEvidence(evidence, publication);
   const current = validatePublication(params, repo, api(`${root}/pulls/${pullRequest}`), api(`${root}/actions/runs/${runId}`));
   if (JSON.stringify(current) !== JSON.stringify(publication)) {

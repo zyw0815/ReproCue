@@ -89,4 +89,6 @@ Use this workflow in a public repository when both screenshots and the assertion
 
 ReproCue validates both revisions, publishes the report, and adds **View the before-and-after comparison** to the PR comment. Each report has a commit- and run-specific address. The generated `reprocue-pages` branch keeps the published site snapshot so future deployments include earlier reports.
 
+See the [example pull request comment](https://github.com/zyw0815/ReproCue-example/pull/13#issuecomment-7083109095) and its [publication run](https://github.com/zyw0815/ReproCue-example/actions/runs/45051512391).
+
 See [Contributing](CONTRIBUTING.md) for the issue and branch workflow.
