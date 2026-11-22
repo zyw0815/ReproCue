@@ -62,7 +62,7 @@ The output contains `report.html`, `report.md`, `report.json`, and any screensho
 
 ## Add a pull request check
 
-1. Copy the [example workflow](examples/reprocue.yml) to `.github/workflows/reprocue.yml` in your application repository. The development example uses `develop` for the ReproCue Action and its PR reporting workflow. For a fixed preview, pin both references to the same reviewed commit.
+1. Copy the [example workflow](examples/reprocue.yml) to `.github/workflows/reprocue.yml` in your application repository. The example uses the `v0.1.0-alpha.2` Action and PR reporting workflow.
 2. Commit one self-contained Playwright spec on the fix branch, with a `ReproCue acceptance` step as described above.
 3. Put exactly one `ReproCue-Spec` line in the PR description. Use the spec's path from the repository root.
 
@@ -78,12 +78,17 @@ From **Checks → Summary**, you can see the verdict, both commit SHAs, and any 
 
 The [separate example repository](https://github.com/zyw0815/ReproCue-example) shows this setup on the upload demo.
 
-## Publish a public demo report
+## Publish an approved report to GitHub Pages
 
-The upload demo has a [direct browser report](https://zyw0815.github.io/ReproCue-example/reports/pr-6/1284476e7f12735a832f856f23f986feb0ae0517/) linked from its [pull request](https://github.com/zyw0815/ReproCue-example/pull/6). The published file includes both screenshots.
+Use this workflow in a public repository when both screenshots and the assertion details can be made public. The [existing upload comparison](https://zyw0815.github.io/ReproCue-example/reports/pr-6/1284476e7f12735a832f856f23f986feb0ae0517/) shows what reviewers will see.
 
-1. Choose a report whose screenshot and assertion details can be public, such as a synthetic fixture.
-2. Put that run's standalone HTML under `docs/reports/pr-<number>/<head-sha>/index.html`. Choose the branch containing `docs/` and the `/docs` folder as the GitHub Pages source. The example publishes from `develop`.
-3. Once the page is live, add the HTTPS URL to the PR conversation. Keep the original Actions artifact available for browser traces.
+1. In the repository's **Settings → Pages**, select **GitHub Actions** as the source. If the `github-pages` environment restricts deployments by branch, allow the default branch.
+2. Copy [Publish ReproCue report](examples/publish-reprocue.yml) to `.github/workflows/publish-reprocue.yml` on the default branch. For a site with already reviewed static content, set `seed-directory` to that folder. The example seeds from `docs/` on the first deployment.
+3. Run the PR check for a same-repository fix and review its successful artifact. Make sure the test supplied a screenshot for each revision.
+4. Under **Actions → Publish ReproCue report → Run workflow**, select the default branch and enter the PR number and numeric ID from the verification run URL. This dispatch is the maintainer's approval to publish that specific report.
+
+ReproCue validates both revisions, publishes the report, and adds **View the before-and-after comparison** to the PR comment. Each report has a commit- and run-specific address. The generated `reprocue-pages` branch keeps the published site snapshot so future deployments include earlier reports.
+
+See the [example pull request comment](https://github.com/zyw0815/ReproCue-example/pull/13#issuecomment-7083109095) and its [publication run](https://github.com/zyw0815/ReproCue-example/actions/runs/45051512391).
 
 See [Contributing](CONTRIBUTING.md) for the issue and branch workflow.
