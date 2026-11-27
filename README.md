@@ -10,7 +10,32 @@ Run the demo on macOS or Linux with Git, Node.js 22 or newer, and npm. It instal
 npm run demo
 ```
 
-Use the printed evidence directory to open `report.html` in your browser. The demo shows a screenshot from each revision at the same point in the test. Open a saved `trace.zip` with the [Playwright Trace Viewer](https://playwright.dev/docs/trace-viewer) to inspect the full sequence.
+Use the printed evidence directory to open `report.html` in your browser. Compare the screenshots side by side or switch to **Overlay** and move the slider to reveal either revision. Overlay is available when both checkpoint images have the same dimensions. Expand **Details** to read the full assertion output or open a saved `trace.zip` with the [Playwright Trace Viewer](https://playwright.dev/docs/trace-viewer) to inspect the full sequence.
+
+## Connect an existing project
+
+In a Git repository with a root npm lockfile and `@playwright/test` declared, generate the pull request workflow.
+
+```sh
+node /path/to/ReproCue/bin/reprocue.mjs init
+```
+
+The command writes `.github/workflows/reprocue.yml` using the current example template. An existing workflow is kept as-is. If you want to try a development version, pass `--ref` with the exact ReproCue commit SHA to pin both workflow references to that commit.
+
+For browser recordings, configure the app to start from each revision and use the matching origin for relative navigations. For example, an app with an npm script named `dev` that serves on port 3000 can use this `playwright.config.mjs`.
+
+```js
+import { defineConfig } from '@playwright/test';
+
+const origin = 'http://127.0.0.1:3000';
+
+export default defineConfig({
+  use: { baseURL: origin },
+  webServer: { command: 'npm run dev', url: origin, reuseExistingServer: false },
+});
+```
+
+Commit the Playwright configuration and workflow before opening a fix PR. Prepare both commits to start their own copy of the application. Record the browser steps, commit the generated test on the fix branch, run the comparison locally and enable the [pull request check](#add-a-pull-request-check).
 
 ## Record an acceptance test
 
@@ -80,7 +105,7 @@ The output contains `report.html`, `report.md`, `report.json`, and any screensho
 
 ## Add a pull request check
 
-1. Copy the [example workflow](examples/reprocue.yml) to `.github/workflows/reprocue.yml` in your application repository. The example uses the `v0.1.0-alpha.2` Action and PR reporting workflow.
+1. Run `reprocue init` in your application repository or copy the [example workflow](examples/reprocue.yml) to `.github/workflows/reprocue.yml`.
 2. Commit one self-contained Playwright spec on the fix branch, with a `ReproCue acceptance` step as described above.
 3. Put exactly one `ReproCue-Spec` line in the PR description. Use the spec's path from the repository root.
 

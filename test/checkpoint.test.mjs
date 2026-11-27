@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -41,7 +42,16 @@ test('compares checkpoints safely and describes missing screenshots', () => {
   assert.match(html, /<img src="data:image\/png;base64,[^"]+" alt="Before checkpoint">/u);
   assert.match(html, /No checkpoint captured for this revision/u);
   assert.match(html, /reprocue-checkpoint/u);
+  assert.doesNotMatch(html, /script-src|<script[^>]*>/u);
 
   const completeHtml = htmlReport(report, { base: image, head: image });
+  const script = completeHtml.match(/<script type="text\/javascript">([\s\S]*?)<\/script>/u)[1];
+  const hash = createHash('sha256').update(script).digest('base64');
+  assert.ok(completeHtml.includes(`script-src 'sha256-${hash}'`));
+  assert.doesNotMatch(script, /alert\(123\)|Received/u);
   assert.doesNotMatch(completeHtml, /[\t ]+$/mu);
+
+  const differentSize = Buffer.from(image);
+  differentSize.writeUInt32BE(2, 16);
+  assert.doesNotMatch(htmlReport(report, { base: image, head: differentSize }), /data-view="overlay"/u);
 });
