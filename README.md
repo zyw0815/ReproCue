@@ -2,6 +2,10 @@
 
 Run the same Playwright test before and after a proposed bug fix. ReproCue records which commits were tested, shows whether the behavior changed, and keeps screenshots and browser traces with the result.
 
+![ReproCue report showing an upload stuck in progress before the fix and a retry button after it](docs/report-preview.png)
+
+[Open an interactive report from an example pull request](https://zyw0815.github.io/ReproCue-example/reports/pr-19/8db59862d4f1c840c4868b08186c63a3aef5d87c/46026116174-1/)
+
 ## Try the demo
 
 Run the demo on macOS or Linux with Git, Node.js 22 or newer, and npm. It installs Playwright Chromium if needed and creates a disposable Git repository with two commits. In the first, a failed image upload leaves the page spinning. In the second, the user sees an error and can retry.
@@ -117,6 +121,8 @@ The output contains `report.html`, `report.md`, `report.json`, and any screensho
 
 For a same-repository PR, the reporting job adds or updates one **ReproCue verification** comment in **Conversation**. It shows both outcomes and links to the evidence. The job has permission to write PR comments and runs separately from the read-only test job.
 
+The comment starts with an artifact download. To add a link that opens the report in a browser, run the [Pages publication workflow](#publish-an-approved-report-to-github-pages) while the PR is open.
+
 From **Checks → Summary**, you can see the verdict, both commit SHAs, and any assertion errors. Open the `reprocue-evidence` artifact and then open `report.html` in a browser to compare the screenshots. Fork PRs use the Checks summary and artifact.
 
 The [separate example repository](https://github.com/zyw0815/ReproCue-example) shows this setup on the upload demo.
@@ -128,7 +134,7 @@ Use this workflow in a public repository when both screenshots and the assertion
 1. In the repository's **Settings → Pages**, select **GitHub Actions** as the source. If the `github-pages` environment restricts deployments by branch, allow the default branch.
 2. Copy [Publish ReproCue report](examples/publish-reprocue.yml) to `.github/workflows/publish-reprocue.yml` on the default branch. For a site with already reviewed static content, set `seed-directory` to that folder. The example seeds from `docs/` on the first deployment.
 3. Run the PR check for a same-repository fix and review its successful artifact. Make sure the test supplied a screenshot for each revision.
-4. Under **Actions → Publish ReproCue report → Run workflow**, select the default branch and enter the PR number and numeric ID from the verification run URL. This dispatch is the maintainer's approval to publish that specific report.
+4. Before merging the PR, go to **Actions → Publish ReproCue report → Run workflow**, select the default branch and enter the PR number and numeric ID from the verification run URL. This dispatch is the maintainer's approval to publish that specific report.
 
 ReproCue validates both revisions, publishes the report, and adds **View the before-and-after comparison** to the PR comment. Each report has a commit- and run-specific address. The generated `reprocue-pages` branch keeps the published site snapshot so future deployments include earlier reports.
 
