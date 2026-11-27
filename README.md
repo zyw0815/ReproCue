@@ -12,6 +12,24 @@ npm run demo
 
 Use the printed evidence directory to open `report.html` in your browser. The demo shows a screenshot from each revision at the same point in the test. Open a saved `trace.zip` with the [Playwright Trace Viewer](https://playwright.dev/docs/trace-viewer) to inspect the full sequence.
 
+## Record an acceptance test
+
+In your application repository, install Playwright and configure its `baseURL` and `webServer` for the app under test. Start the app for recording, then run this from that repository with a new test path.
+
+```sh
+node /path/to/ReproCue/bin/reprocue.mjs record http://127.0.0.1:3000/settings \
+  --spec tests/settings.spec.mjs \
+  --expect-text 'Settings saved'
+```
+
+Playwright Inspector records your browser actions. When you finish reproducing the issue, close the recording browser. `--expect-text` adds a check for text that should appear after the last action, which also works when the affected page never shows it. You can also omit the flag and record one final assertion using Inspector.
+
+Append `--channel msedge` to record with an installed Microsoft Edge browser. Verification uses the browser in your project's Playwright configuration.
+
+ReproCue exports an editable spec with the `ReproCue acceptance` step and a screenshot checkpoint. Navigations on the recording origin use relative paths so Playwright's `baseURL` points each verification run at its own revision. Start with one page on the application origin and review the generated actions before committing them.
+
+To import an existing Playwright Test recording, pass `--from-codegen ./recording.spec.mjs` and the original recording URL to the same command. Stop the manually started app before verifying if Playwright's `webServer` needs that port. Commit the generated spec on your fix branch and specify its path in the PR description.
+
 ## Verify a fix in your repository
 
 Both Git revisions need `@playwright/test` and a root `package-lock.json`. Install the browsers your test uses before verification with `npm ci` and `npx playwright install`. If the revisions use different Playwright versions, install the browsers for both versions. Use a single self-contained spec and commit it on the proposed branch. Keep any shared fixtures or imports available at both revisions.
