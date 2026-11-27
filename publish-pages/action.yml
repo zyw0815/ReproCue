@@ -39,6 +39,10 @@ runs:
       uses: actions/upload-pages-artifact@v4
       with:
         path: ${{ steps.archive.outputs.site-path }}
+    - name: Allow the Pages artifact listing to catch up
+      shell: bash
+      # The deployment action can miss an artifact immediately after upload.
+      run: sleep 60
     - name: Deploy the Pages site
       id: deploy
       uses: actions/deploy-pages@v4
