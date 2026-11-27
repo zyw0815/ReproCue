@@ -4,7 +4,7 @@ Run the same Playwright test before and after a proposed bug fix. ReproCue recor
 
 ![ReproCue report showing an upload stuck in progress before the fix and a retry button after it](docs/report-preview.png)
 
-[Open an interactive report from an example pull request](https://zyw0815.github.io/ReproCue-example/reports/pr-19/8db59862d4f1c840c4868b08186c63a3aef5d87c/46026116174-1/)
+[Open a published report in your browser](https://zyw0815.github.io/ReproCue-example/reports/pr-13/4b74e1806a8798788bcd2174a918f3512263bca9/45051356861-1/)
 
 ## Try the demo
 
