@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 import { parseArgs } from 'node:util';
+import { init } from '../src/init.mjs';
 import { record } from '../src/record.mjs';
 import { verify } from '../src/verify.mjs';
 
 const usage = [
   'Usage: reprocue verify --base <ref> --head <ref> --spec <file> [--output <dir>] [--project <name>]',
   '       reprocue record <url> --spec <file> [--expect-text <text>] [--channel <name> | --from-codegen <file>]',
+  '       reprocue init [--ref <git-ref>]',
 ].join('\n');
 
 function runVerify(args) {
@@ -27,7 +29,7 @@ function runVerify(args) {
     console.log(usage);
   } else {
     if (positionals.length !== 1 || positionals[0] !== 'verify') {
-      throw new Error('Expected the verify or record command.');
+      throw new Error('Expected the verify, record or init command.');
     }
     if (Object.values(values).some(value => value === '') || !values.base || !values.head || !values.spec) {
       throw new Error('Specify non-empty --base, --head and --spec values.');
@@ -74,10 +76,27 @@ function runRecord(args) {
   console.log('Review the scenario before committing it on the proposed branch, then use reprocue verify.');
 }
 
+function runInit(args) {
+  const { values } = parseArgs({
+    args,
+    options: { ref: { type: 'string' }, help: { type: 'boolean', short: 'h' } },
+  });
+  if (values.help) {
+    console.log(usage);
+    return;
+  }
+  const { path, created, warnings } = init(values);
+  console.log(`ReproCue: ${created ? 'wrote' : 'found existing workflow at'} ${path}`);
+  for (const warning of warnings) console.warn(warning);
+  console.log('Commit the workflow. Add a ReproCue-Spec line and the reprocue label to a pull request.');
+}
+
 try {
   const args = process.argv.slice(2);
   if (args[0] === 'record') {
     runRecord(args.slice(1));
+  } else if (args[0] === 'init') {
+    runInit(args.slice(1));
   } else {
     runVerify(args);
   }

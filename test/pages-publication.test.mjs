@@ -84,6 +84,7 @@ test('renders only trusted HTML from the approved evidence and embeds both PNGs'
   assert.match(html, /Fix verified/u);
   assert.match(html, /&lt;script&gt;untrusted\(\)&lt;\/script&gt;/u);
   assert.doesNotMatch(html, /<script>|alsoUntrusted/u);
+  assert.match(html, /script-src 'sha256-/u);
   assert.equal(html.split(image.toString('base64')).length - 1, 2);
 });
 

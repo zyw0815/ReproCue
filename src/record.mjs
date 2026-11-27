@@ -1,11 +1,12 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import {
   closeSync, constants, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync, readSync,
-  realpathSync, rmSync, statSync, writeFileSync,
+  rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { recordedSpec } from './record-export.mjs';
+import { repository } from './repository.mjs';
 
 const maximumBytes = 1024 * 1024;
 
@@ -19,27 +20,6 @@ function recordingUrl(value) {
     throw error;
   }
   return url.href;
-}
-
-function repository(cwd) {
-  const env = { ...process.env };
-  for (const variable of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_PREFIX']) {
-    delete env[variable];
-  }
-  const gitPath = (...args) => execFileSync('git', ['rev-parse', ...args], {
-    cwd, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 5_000,
-  }).replace(/\n$/u, '');
-  try {
-    return {
-      root: realpathSync(gitPath('--show-toplevel')),
-      metadata: [
-        realpathSync(gitPath('--absolute-git-dir')),
-        realpathSync(resolve(cwd, gitPath('--git-common-dir'))),
-      ],
-    };
-  } catch {
-    throw new Error('Run record inside the Git repository where the scenario will be saved.');
-  }
 }
 
 function destination(repo, spec, createParents = false) {
@@ -133,7 +113,7 @@ function codegen(repo, url, channel) {
 
 export function record(options, cwd = process.cwd()) {
   const url = recordingUrl(options.url);
-  const repo = repository(cwd);
+  const repo = repository(cwd, 'Run record inside the Git repository where the scenario will be saved.');
   const file = destination(repo, options.spec);
   const source = options.fromCodegen
     ? readCodegen(resolve(cwd, options.fromCodegen))
